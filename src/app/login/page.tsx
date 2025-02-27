@@ -44,8 +44,22 @@ export default function Login() {
       });
       
       debugLog('Response received', { status: response.status, ok: response.ok });
-      const data = await response.json();
-      debugLog('Response data', data);
+      
+      // Get response as text first to debug
+      const rawText = await response.text();
+      debugLog('Raw response text:', rawText);
+      
+      // Try to parse JSON
+      let data;
+      try {
+        data = JSON.parse(rawText);
+        debugLog('Parsed JSON data:', data);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        setError(`Server returned invalid format. Status: ${response.status}. See console for details.`);
+        setIsLoading(false);
+        return;
+      }
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to login');

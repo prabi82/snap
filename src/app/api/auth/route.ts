@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { connectMongoose } from '@/lib/mongodb';
 import User from '@/models/User';
 import { ApiResponse } from '@/types';
+import { ensureModelsAreRegistered } from '@/lib/models-registry';
 
 // Secret for JWT
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -11,8 +12,14 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 export async function POST(request: NextRequest) {
   try {
     console.log('Auth API called');
+    
+    // Ensure all models are registered
+    console.log('Registering models...');
+    ensureModelsAreRegistered();
+    
     // Connect to MongoDB
     try {
+      console.log('Connecting to MongoDB with URI set:', !!process.env.MONGODB_URI);
       await connectMongoose();
       console.log('MongoDB connected successfully');
     } catch (dbError) {
@@ -25,8 +32,10 @@ export async function POST(request: NextRequest) {
     
     let body;
     try {
-      body = await request.json();
-      console.log('Request body parsed successfully');
+      const bodyText = await request.text();
+      console.log('Request body text:', bodyText);
+      body = JSON.parse(bodyText);
+      console.log('Request body parsed successfully:', body);
     } catch (parseError) {
       console.error('Error parsing request body:', parseError);
       return NextResponse.json<ApiResponse<null>>({
@@ -52,7 +61,7 @@ export async function POST(request: NextRequest) {
     let user;
     try {
       user = await User.findOne({ email });
-      console.log('User query completed');
+      console.log('User query completed:', user ? 'User found' : 'User not found');
     } catch (findError) {
       console.error('Error finding user:', findError);
       return NextResponse.json<ApiResponse<null>>({
@@ -74,8 +83,9 @@ export async function POST(request: NextRequest) {
     // Compare passwords
     let isMatch;
     try {
+      console.log('Comparing passwords');
       isMatch = await user.comparePassword(password);
-      console.log('Password comparison completed');
+      console.log('Password comparison completed, result:', isMatch);
     } catch (passwordError) {
       console.error('Error comparing passwords:', passwordError);
       return NextResponse.json<ApiResponse<null>>({
