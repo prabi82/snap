@@ -4,19 +4,8 @@ import { useState, useEffect } from 'react';
 import PhotoCard from '@/components/PhotoCard';
 import { Photo } from '@/types';
 
-// Define a more specific type to match what the API returns
-interface PhotoListItem {
-  id: number;
-  title: string;
-  description: string | null;
-  imageUrl?: string; // New field name
-  image_url?: string; // Old field name
-  votes: number;
-  author: string;
-}
-
 export default function Photos() {
-  const [photos, setPhotos] = useState<PhotoListItem[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   
@@ -101,7 +90,7 @@ export default function Photos() {
           {photos.map(photo => (
             <PhotoCard
               key={photo.id}
-              id={photo.id}
+              id={photo.id as number}
               title={photo.title}
               description={photo.description}
               image_url={photo.image_url}

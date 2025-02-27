@@ -27,6 +27,19 @@ export interface CommentDocument extends Document {
   updatedAt: Date;
 }
 
+// Client-side photo type (for use in components)
+export interface Photo {
+  id: number | string;
+  title: string;
+  description: string | null;
+  imageUrl?: string;
+  image_url?: string;
+  votes: number;
+  author: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+}
+
 // API response type
 export interface ApiResponse<T> {
   success: boolean;

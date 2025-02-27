@@ -7,7 +7,7 @@ import { Photo } from '@/types';
 
 export default function Profile() {
   const [user, setUser] = useState<any>(null);
-  const [photos, setPhotos] = useState<(Photo & { author: string })[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const router = useRouter();
@@ -136,10 +136,11 @@ export default function Profile() {
           {photos.map(photo => (
             <PhotoCard
               key={photo.id}
-              id={photo.id}
+              id={photo.id as number}
               title={photo.title}
               description={photo.description}
               image_url={photo.image_url}
+              imageUrl={photo.imageUrl}
               votes={photo.votes}
               author={photo.author}
               onVote={handleVote}
