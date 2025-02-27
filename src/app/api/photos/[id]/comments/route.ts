@@ -4,9 +4,23 @@ import { connectMongoose } from '@/lib/mongodb';
 import Photo from '@/models/Photo';
 import Comment from '@/models/Comment';
 import mongoose from 'mongoose';
-import { ApiResponse } from '@/types';
+import { ApiResponse, CommentDocument } from '@/types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// Type for the populated comment result
+interface PopulatedComment {
+  _id: mongoose.Types.ObjectId;
+  content: string;
+  photo: mongoose.Types.ObjectId | string;
+  user: {
+    _id: mongoose.Types.ObjectId;
+    username: string;
+  } | mongoose.Types.ObjectId | string;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
+}
 
 // Get user from token
 function getUserFromToken(req: NextRequest) {
@@ -75,20 +89,23 @@ export async function POST(
       user: user.id
     });
     
-    // Get the comment with user information
+    // Get the comment with user information and cast to the correct type
     const commentWithUser = await Comment.findById(newComment._id)
       .populate('user', 'username')
-      .lean();
+      .lean() as unknown as PopulatedComment | null;
     
     // Format the response with null checks
     let formattedComment;
     
     if (commentWithUser) {
-      // Check if user is populated and has username
-      const username = commentWithUser.user && 
-                      typeof commentWithUser.user === 'object' && 
-                      'username' in commentWithUser.user ? 
-                      commentWithUser.user.username : 'Unknown User';
+      // Get username safely using type check
+      let username = 'Unknown User';
+      
+      if (commentWithUser.user && 
+          typeof commentWithUser.user === 'object' && 
+          'username' in commentWithUser.user) {
+        username = commentWithUser.user.username;
+      }
       
       formattedComment = {
         ...commentWithUser,
@@ -146,17 +163,20 @@ export async function GET(
       }, { status: 404 });
     }
     
-    // Get comments
+    // Get comments and cast to the correct type
     const comments = await Comment.find({ photo: photoId })
       .populate('user', 'username')
       .sort({ createdAt: 1 })
-      .lean();
+      .lean() as unknown as PopulatedComment[];
     
     // Format comments with null and type checks
     const formattedComments = comments.map(comment => {
       // Safely extract username
       let username = 'Unknown User';
-      if (comment.user && typeof comment.user === 'object' && 'username' in comment.user) {
+      
+      if (comment.user && 
+          typeof comment.user === 'object' && 
+          'username' in comment.user) {
         username = comment.user.username;
       }
       
