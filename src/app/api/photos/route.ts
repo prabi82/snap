@@ -3,10 +3,27 @@ import jwt from 'jsonwebtoken';
 import { connectMongoose } from '@/lib/mongodb';
 import Photo from '@/models/Photo';
 import User from '@/models/User';
-import { ApiResponse } from '@/types';
+import { ApiResponse, PhotoDocument, UserDocument } from '@/types';
 import { ensureModelsAreRegistered } from '@/lib/models-registry';
+import mongoose from 'mongoose';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// Type for the populated photo results
+interface PopulatedPhoto {
+  _id: mongoose.Types.ObjectId;
+  title: string;
+  description: string | null;
+  imageUrl: string;
+  votes: number;
+  user: {
+    _id: mongoose.Types.ObjectId;
+    username: string;
+  } | mongoose.Types.ObjectId | string;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
+}
 
 // Get user from token
 function getUserFromToken(req: NextRequest) {
@@ -19,6 +36,14 @@ function getUserFromToken(req: NextRequest) {
   } catch (error) {
     return null;
   }
+}
+
+// Helper function to safely extract username
+function getUsernameFromPopulatedUser(user: any): string {
+  if (user && typeof user === 'object' && 'username' in user) {
+    return user.username;
+  }
+  return 'Unknown';
 }
 
 // Get all photos
@@ -42,20 +67,17 @@ export async function GET(request: NextRequest) {
     const photos = await Photo.find(query)
       .sort({ createdAt: -1 })
       .populate('user', 'username') // Select only username from the User model
-      .lean(); // Convert to plain object
+      .lean() as unknown as PopulatedPhoto[]; // Cast to the correct type
     
     // Transform the results to match the expected format
     const formattedPhotos = photos.map(photo => {
       // Safely extract username from populated user
-      let username = 'Unknown';
-      if (photo.user && typeof photo.user === 'object' && 'username' in photo.user) {
-        username = photo.user.username;
-      }
+      const username = getUsernameFromPopulatedUser(photo.user);
       
       return {
         ...photo,
         author: username,
-        id: photo._id // Ensure ID is set
+        id: photo._id.toString() // Ensure ID is set
       };
     });
     
@@ -68,6 +90,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json<ApiResponse<null>>({
       success: false,
       error: 'Server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
@@ -144,6 +167,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json<ApiResponse<null>>({
       success: false,
       error: error instanceof Error ? error.message : 'Server error',
+      details: error instanceof Error ? error.stack : 'Unknown error'
     }, { status: 500 });
   }
 } 

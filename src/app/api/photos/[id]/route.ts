@@ -4,10 +4,46 @@ import { connectMongoose } from '@/lib/mongodb';
 import Photo from '@/models/Photo';
 import Comment from '@/models/Comment';
 import mongoose from 'mongoose';
-import { ApiResponse } from '@/types';
+import { ApiResponse, PhotoDocument, UserDocument } from '@/types';
 import { ensureModelsAreRegistered } from '@/lib/models-registry';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// Type definitions for populated documents from Mongoose
+interface PopulatedUser {
+  _id: mongoose.Types.ObjectId;
+  username: string;
+}
+
+interface PopulatedPhoto {
+  _id: mongoose.Types.ObjectId;
+  title: string;
+  description: string | null;
+  imageUrl: string;
+  votes: number;
+  user: PopulatedUser | mongoose.Types.ObjectId | string;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
+}
+
+interface PopulatedComment {
+  _id: mongoose.Types.ObjectId;
+  content: string;
+  photo: mongoose.Types.ObjectId | string;
+  user: PopulatedUser | mongoose.Types.ObjectId | string;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
+}
+
+// Helper function to safely extract username from populated user
+function getUsernameFromPopulatedUser(user: any): string {
+  if (user && typeof user === 'object' && 'username' in user) {
+    return user.username;
+  }
+  return 'Unknown';
+}
 
 // Get user from token
 function getUserFromToken(req: NextRequest) {
@@ -46,7 +82,7 @@ export async function GET(
     // Find the photo and populate user (author) information
     const photo = await Photo.findById(photoId)
       .populate('user', 'username')
-      .lean();
+      .lean() as unknown as PopulatedPhoto;
     
     if (!photo) {
       return NextResponse.json<ApiResponse<null>>({
@@ -59,22 +95,16 @@ export async function GET(
     const comments = await Comment.find({ photo: photoId })
       .populate('user', 'username')
       .sort({ createdAt: 1 })
-      .lean();
+      .lean() as unknown as PopulatedComment[];
     
     console.log('Retrieved photo data:', photo);
     
-    // Extract username safely
-    let username = 'Unknown';
-    if (photo.user && typeof photo.user === 'object' && 'username' in photo.user) {
-      username = photo.user.username;
-    }
+    // Extract username safely using helper function
+    const username = getUsernameFromPopulatedUser(photo.user);
     
     // Format the comments safely
     const formattedComments = comments.map(comment => {
-      let commentUsername = 'Unknown';
-      if (comment.user && typeof comment.user === 'object' && 'username' in comment.user) {
-        commentUsername = comment.user.username;
-      }
+      const commentUsername = getUsernameFromPopulatedUser(comment.user);
       
       return {
         ...comment,
@@ -103,6 +133,7 @@ export async function GET(
     return NextResponse.json<ApiResponse<null>>({
       success: false,
       error: 'Server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
@@ -141,7 +172,7 @@ export async function PUT(
     const { title, description } = body;
     
     // Check if photo exists and belongs to the user
-    const photo = await Photo.findById(photoId);
+    const photo = await Photo.findById(photoId) as PhotoDocument | null;
     
     if (!photo) {
       return NextResponse.json<ApiResponse<null>>({
@@ -167,17 +198,14 @@ export async function PUT(
     // Get the updated photo with user information
     const updatedPhoto = await Photo.findById(photoId)
       .populate('user', 'username')
-      .lean();
+      .lean() as unknown as PopulatedPhoto;
     
     if (!updatedPhoto) {
       throw new Error('Failed to retrieve updated photo');
     }
     
-    // Extract username safely
-    let username = 'Unknown';
-    if (updatedPhoto.user && typeof updatedPhoto.user === 'object' && 'username' in updatedPhoto.user) {
-      username = updatedPhoto.user.username;
-    }
+    // Extract username safely using helper function
+    const username = getUsernameFromPopulatedUser(updatedPhoto.user);
     
     // Format the response with consistent field names
     const formattedPhoto = {
@@ -196,6 +224,7 @@ export async function PUT(
     return NextResponse.json<ApiResponse<null>>({
       success: false,
       error: 'Server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
@@ -231,7 +260,7 @@ export async function DELETE(
     }
     
     // Check if photo exists and belongs to the user
-    const photo = await Photo.findById(photoId);
+    const photo = await Photo.findById(photoId) as PhotoDocument | null;
     
     if (!photo) {
       return NextResponse.json<ApiResponse<null>>({
@@ -262,6 +291,7 @@ export async function DELETE(
     return NextResponse.json<ApiResponse<null>>({
       success: false,
       error: 'Server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 } 

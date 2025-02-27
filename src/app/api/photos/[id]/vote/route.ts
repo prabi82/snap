@@ -3,10 +3,36 @@ import jwt from 'jsonwebtoken';
 import { connectMongoose } from '@/lib/mongodb';
 import Photo from '@/models/Photo';
 import mongoose from 'mongoose';
-import { ApiResponse } from '@/types';
+import { ApiResponse, PhotoDocument } from '@/types';
 import { ensureModelsAreRegistered } from '@/lib/models-registry';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// Type definitions for populated documents from Mongoose
+interface PopulatedUser {
+  _id: mongoose.Types.ObjectId;
+  username: string;
+}
+
+interface PopulatedPhoto {
+  _id: mongoose.Types.ObjectId;
+  title: string;
+  description: string | null;
+  imageUrl: string;
+  votes: number;
+  user: PopulatedUser | mongoose.Types.ObjectId | string;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
+}
+
+// Helper function to safely extract username from populated user
+function getUsernameFromPopulatedUser(user: any): string {
+  if (user && typeof user === 'object' && 'username' in user) {
+    return user.username;
+  }
+  return 'Unknown';
+}
 
 // Get user from token
 function getUserFromToken(req: NextRequest) {
@@ -52,7 +78,7 @@ export async function POST(
     }
     
     // Check if photo exists
-    const photo = await Photo.findById(photoId);
+    const photo = await Photo.findById(photoId) as PhotoDocument | null;
     
     if (!photo) {
       return NextResponse.json<ApiResponse<null>>({
@@ -67,17 +93,14 @@ export async function POST(
     // Get updated photo
     const updatedPhoto = await Photo.findById(photoId)
       .populate('user', 'username')
-      .lean();
+      .lean() as unknown as PopulatedPhoto;
     
     if (!updatedPhoto) {
       throw new Error('Failed to retrieve updated photo');
     }
     
-    // Extract username safely
-    let username = 'Unknown';
-    if (updatedPhoto.user && typeof updatedPhoto.user === 'object' && 'username' in updatedPhoto.user) {
-      username = updatedPhoto.user.username;
-    }
+    // Extract username safely using helper function
+    const username = getUsernameFromPopulatedUser(updatedPhoto.user);
     
     // Format the response with consistent field names
     const formattedPhoto = {
@@ -96,6 +119,7 @@ export async function POST(
     return NextResponse.json<ApiResponse<null>>({
       success: false,
       error: 'Server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 } 
