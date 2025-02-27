@@ -1,0 +1,3 @@
+@echo off
+echo Starting Snap Photo Sharing App...
+npm run dev 
