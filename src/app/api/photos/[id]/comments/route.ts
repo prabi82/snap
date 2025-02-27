@@ -80,11 +80,29 @@ export async function POST(
       .populate('user', 'username')
       .lean();
     
-    // Format the response
-    const formattedComment = {
-      ...commentWithUser,
-      username: commentWithUser.user.username
-    };
+    // Format the response with null checks
+    let formattedComment;
+    
+    if (commentWithUser) {
+      // Check if user is populated and has username
+      const username = commentWithUser.user && 
+                      typeof commentWithUser.user === 'object' && 
+                      'username' in commentWithUser.user ? 
+                      commentWithUser.user.username : 'Unknown User';
+      
+      formattedComment = {
+        ...commentWithUser,
+        username: username
+      };
+    } else {
+      // Fallback if comment not found (shouldn't happen normally)
+      formattedComment = {
+        _id: newComment._id,
+        content: newComment.content,
+        username: 'Unknown User',
+        createdAt: newComment.createdAt
+      };
+    }
     
     return NextResponse.json<ApiResponse<any>>({
       success: true,
@@ -95,6 +113,7 @@ export async function POST(
     return NextResponse.json<ApiResponse<null>>({
       success: false,
       error: 'Server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
@@ -133,11 +152,19 @@ export async function GET(
       .sort({ createdAt: 1 })
       .lean();
     
-    // Format comments
-    const formattedComments = comments.map(comment => ({
-      ...comment,
-      username: comment.user.username
-    }));
+    // Format comments with null and type checks
+    const formattedComments = comments.map(comment => {
+      // Safely extract username
+      let username = 'Unknown User';
+      if (comment.user && typeof comment.user === 'object' && 'username' in comment.user) {
+        username = comment.user.username;
+      }
+      
+      return {
+        ...comment,
+        username
+      };
+    });
     
     return NextResponse.json<ApiResponse<any[]>>({
       success: true,
@@ -148,6 +175,7 @@ export async function GET(
     return NextResponse.json<ApiResponse<null>>({
       success: false,
       error: 'Server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 } 
