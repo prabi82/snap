@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -11,12 +11,30 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   
+  // Debug helper
+  const debugLog = (message: string, data?: any) => {
+    console.log(`[Login Debug] ${message}`, data || '');
+  };
+  
+  useEffect(() => {
+    debugLog('Login component mounted');
+    // Check if already logged in
+    const token = localStorage.getItem('token');
+    if (token) {
+      debugLog('User already has token, redirecting to photos');
+      router.push('/photos');
+    }
+  }, [router]);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
     
+    debugLog(`Attempting login with email: ${email}`);
+    
     try {
+      debugLog('Sending request to /api/auth');
       const response = await fetch('/api/auth', {
         method: 'POST',
         headers: {
@@ -25,19 +43,38 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       });
       
+      debugLog('Response received', { status: response.status, ok: response.ok });
       const data = await response.json();
+      debugLog('Response data', data);
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to login');
       }
       
       // Save token and user to localStorage
+      debugLog('Login successful, storing data');
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
       
-      // Redirect to home page
-      router.push('/photos');
+      // Try navigation with a hard redirect for reliability
+      debugLog('Navigating to /photos');
+      
+      // First try the router
+      try {
+        router.push('/photos');
+        // Also try a backup with window.location after a short delay
+        setTimeout(() => {
+          if (window.location.pathname !== '/photos') {
+            debugLog('Router navigation may have failed, using window.location');
+            window.location.href = '/photos';
+          }
+        }, 500);
+      } catch (navError) {
+        debugLog('Router navigation failed, using window.location', navError);
+        window.location.href = '/photos';
+      }
     } catch (err: any) {
+      debugLog('Login error', err.message);
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -115,6 +152,15 @@ export default function Login() {
             Create an account
           </Link>
         </p>
+        
+        {/* Login tip for seeded users */}
+        <div className="mt-5 text-xs text-gray-500 border-t pt-4">
+          <p>Try logging in with:</p>
+          <ul className="mt-1">
+            <li><strong>Email:</strong> admin@example.com</li>
+            <li><strong>Password:</strong> password123</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

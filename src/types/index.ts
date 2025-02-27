@@ -1,32 +1,33 @@
-export interface User {
-  id: number;
+import { Document } from 'mongoose';
+
+export interface UserDocument extends Document {
   username: string;
   email: string;
   password?: string;
-  created_at: Date;
-  updated_at: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
-export interface Photo {
-  id: number;
-  user_id: number;
+export interface PhotoDocument extends Document {
   title: string;
   description: string | null;
-  image_url: string;
+  imageUrl: string;
   votes: number;
-  created_at: Date;
-  updated_at: Date;
+  user: UserDocument | string; // Can be populated or just the ID
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface Comment {
-  id: number;
-  photo_id: number;
-  user_id: number;
+export interface CommentDocument extends Document {
   content: string;
-  created_at: Date;
-  updated_at: Date;
+  photo: PhotoDocument | string; // Can be populated or just the ID
+  user: UserDocument | string; // Can be populated or just the ID
+  createdAt: Date;
+  updatedAt: Date;
 }
 
+// API response type
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

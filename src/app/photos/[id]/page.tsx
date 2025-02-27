@@ -18,7 +18,7 @@ interface PhotoDetail {
   user_id: number;
   title: string;
   description: string | null;
-  image_url: string;
+  imageUrl: string;
   votes: number;
   author: string;
   created_at: string;
@@ -52,8 +52,11 @@ export default function PhotoDetails({ params }: { params: { id: string } }) {
         throw new Error(data.error || 'Failed to fetch photo');
       }
       
+      // Log the data we receive to help debug
+      console.log('Photo data received:', data.data);
       setPhoto(data.data);
     } catch (err: any) {
+      console.error('Error fetching photo:', err);
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -163,6 +166,9 @@ export default function PhotoDetails({ params }: { params: { id: string } }) {
     );
   }
   
+  // Determine the image URL, handling both old and new field names for compatibility
+  const imageUrl = photo.imageUrl || (photo as any).image_url;
+  
   return (
     <div className="py-8">
       <Link href="/photos" className="text-primary hover:underline mb-4 inline-block">
@@ -171,14 +177,20 @@ export default function PhotoDetails({ params }: { params: { id: string } }) {
       
       <div className="card mt-4">
         <div className="relative w-full aspect-video mb-4">
-          <Image
-            src={photo.image_url}
-            alt={photo.title}
-            className="rounded-lg object-contain"
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
-            priority
-          />
+          {imageUrl ? (
+            <Image
+              src={imageUrl}
+              alt={photo.title}
+              className="rounded-lg object-contain"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+              priority
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg text-red-500">
+              Image not available
+            </div>
+          )}
         </div>
         
         <div className="flex justify-between items-center mb-4">

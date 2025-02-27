@@ -8,7 +8,8 @@ interface PhotoCardProps {
   id: number;
   title: string;
   description: string | null;
-  image_url: string;
+  image_url?: string;
+  imageUrl?: string;
   votes: number;
   author: string;
   onVote?: (id: number) => Promise<void>;
@@ -19,12 +20,15 @@ export default function PhotoCard({
   title,
   description,
   image_url,
+  imageUrl,
   votes,
   author,
   onVote,
 }: PhotoCardProps) {
   const [isVoting, setIsVoting] = useState(false);
   const [currentVotes, setCurrentVotes] = useState(votes);
+  
+  const finalImageUrl = imageUrl || image_url;
   
   const handleVote = async () => {
     if (!onVote || isVoting) return;
@@ -43,14 +47,20 @@ export default function PhotoCard({
   return (
     <div className="card overflow-hidden">
       <div className="relative aspect-video w-full mb-3">
-        <Image
-          src={image_url}
-          alt={title}
-          className="object-cover rounded-md"
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          priority
-        />
+        {finalImageUrl ? (
+          <Image
+            src={finalImageUrl}
+            alt={title}
+            className="object-cover rounded-md"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            priority
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-md text-red-500">
+            Image not available
+          </div>
+        )}
       </div>
       
       <h3 className="text-xl font-semibold mb-1">{title}</h3>

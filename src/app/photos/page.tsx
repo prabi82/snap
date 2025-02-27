@@ -4,8 +4,19 @@ import { useState, useEffect } from 'react';
 import PhotoCard from '@/components/PhotoCard';
 import { Photo } from '@/types';
 
+// Define a more specific type to match what the API returns
+interface PhotoListItem {
+  id: number;
+  title: string;
+  description: string | null;
+  imageUrl?: string; // New field name
+  image_url?: string; // Old field name
+  votes: number;
+  author: string;
+}
+
 export default function Photos() {
-  const [photos, setPhotos] = useState<(Photo & { author: string })[]>([]);
+  const [photos, setPhotos] = useState<PhotoListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   
@@ -22,8 +33,10 @@ export default function Photos() {
         throw new Error(data.error || 'Failed to fetch photos');
       }
       
+      console.log('Photos received from API:', data.data);
       setPhotos(data.data || []);
     } catch (err: any) {
+      console.error('Error fetching photos:', err);
       setError(err.message);
     } finally {
       setIsLoading(false);
@@ -92,6 +105,7 @@ export default function Photos() {
               title={photo.title}
               description={photo.description}
               image_url={photo.image_url}
+              imageUrl={photo.imageUrl}
               votes={photo.votes}
               author={photo.author}
               onVote={handleVote}

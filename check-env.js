@@ -70,4 +70,24 @@ Object.keys(process.env)
       ? '******** (Set)' 
       : process.env[key];
     console.log(`${key}: ${value}`);
-  }); 
+  });
+
+// Simple script to check environment variables
+require('dotenv').config({ path: './.env.local' });
+const fs = require('fs');
+
+console.log('Checking environment variables:');
+console.log('MONGODB_URI:', process.env.MONGODB_URI || 'Not set');
+console.log('MONGODB_DB_NAME:', process.env.MONGODB_DB_NAME || 'Not set');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set (value hidden)' : 'Not set');
+console.log('NODE_ENV:', process.env.NODE_ENV || 'Not set');
+
+// Check if file can be read
+try {
+  const contents = fs.readFileSync('./.env.local', 'utf8');
+  console.log('\nFile exists and can be read.');
+  console.log('File size:', contents.length, 'bytes');
+  console.log('First 50 characters:', contents.substring(0, 50) + '...');
+} catch (err) {
+  console.error('\nError reading .env.local file:', err.message);
+} 

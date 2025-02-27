@@ -11,16 +11,38 @@ const nextConfig = {
   },
   // For Vercel deployment
   output: 'standalone',
-  // Source directory configuration - fix for "Couldn't find any `pages` or `app` directory"
+  // These are the updated App Router configurations
   experimental: {
-    appDir: true,
+    // No longer need appDir in Next.js 14+ as it's the default
+    serverComponentsExternalPackages: [],
   },
-  // This is the correct and required setting for projects with src directory
+  // This is now controlled by output settings
   distDir: '.next',
-  // Explicitly tell Next.js where your pages/app directories are
+  // These are standard Next.js settings
   pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
-  // Set your source directory
-  dir: './src',
+  // Add image domains configuration
+  images: {
+    domains: ['www.caa.gov.om', 'localhost', 'res.cloudinary.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'www.caa.gov.om',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        pathname: '**',
+      },
+    ],
+  },
+  // Increase API body size limit for file uploads (10MB)
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+    responseLimit: '10mb',
+  },
 };
 
 module.exports = nextConfig; 

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
-import { ApiResponse } from '@/types';
 import jwt from 'jsonwebtoken';
+import { connectMongoose } from '@/lib/mongodb';
+import Photo from '@/models/Photo';
+import Comment from '@/models/Comment';
+import mongoose from 'mongoose';
+import { ApiResponse } from '@/types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -12,7 +15,7 @@ function getUserFromToken(req: NextRequest) {
   if (!token) return null;
   
   try {
-    return jwt.verify(token, JWT_SECRET) as { id: number; email: string };
+    return jwt.verify(token, JWT_SECRET) as { id: string; email: string };
   } catch (error) {
     return null;
   }
@@ -24,6 +27,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    await connectMongoose();
+    
     const user = getUserFromToken(request);
     
     if (!user) {
@@ -34,6 +39,15 @@ export async function POST(
     }
     
     const photoId = params.id;
+    
+    // Check if it's a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(photoId)) {
+      return NextResponse.json<ApiResponse<null>>({
+        success: false,
+        error: 'Invalid photo ID',
+      }, { status: 400 });
+    }
+    
     const body = await request.json();
     const { content } = body;
     
@@ -45,36 +59,36 @@ export async function POST(
     }
     
     // Check if photo exists
-    const photos = await query(
-      'SELECT * FROM photos WHERE id = ?',
-      [photoId]
-    ) as any[];
+    const photo = await Photo.findById(photoId);
     
-    if (photos.length === 0) {
+    if (!photo) {
       return NextResponse.json<ApiResponse<null>>({
         success: false,
         error: 'Photo not found',
       }, { status: 404 });
     }
     
-    // Insert comment
-    const result = await query(
-      'INSERT INTO comments (photo_id, user_id, content) VALUES (?, ?, ?)',
-      [photoId, user.id, content]
-    );
+    // Create new comment
+    const newComment = await Comment.create({
+      content,
+      photo: photoId,
+      user: user.id
+    });
     
-    // Get the inserted comment with username
-    const newComment = await query(
-      `SELECT c.*, u.username
-       FROM comments c
-       JOIN users u ON c.user_id = u.id
-       WHERE c.id = ?`,
-      [(result as any).insertId]
-    ) as any[];
+    // Get the comment with user information
+    const commentWithUser = await Comment.findById(newComment._id)
+      .populate('user', 'username')
+      .lean();
+    
+    // Format the response
+    const formattedComment = {
+      ...commentWithUser,
+      username: commentWithUser.user.username
+    };
     
     return NextResponse.json<ApiResponse<any>>({
       success: true,
-      data: newComment[0],
+      data: formattedComment,
     }, { status: 201 });
   } catch (error) {
     console.error('Error adding comment:', error);
@@ -91,15 +105,22 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    await connectMongoose();
+    
     const photoId = params.id;
     
-    // Check if photo exists
-    const photos = await query(
-      'SELECT * FROM photos WHERE id = ?',
-      [photoId]
-    ) as any[];
+    // Check if it's a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(photoId)) {
+      return NextResponse.json<ApiResponse<null>>({
+        success: false,
+        error: 'Invalid photo ID',
+      }, { status: 400 });
+    }
     
-    if (photos.length === 0) {
+    // Check if photo exists
+    const photo = await Photo.findById(photoId);
+    
+    if (!photo) {
       return NextResponse.json<ApiResponse<null>>({
         success: false,
         error: 'Photo not found',
@@ -107,18 +128,20 @@ export async function GET(
     }
     
     // Get comments
-    const comments = await query(
-      `SELECT c.*, u.username
-       FROM comments c
-       JOIN users u ON c.user_id = u.id
-       WHERE c.photo_id = ?
-       ORDER BY c.created_at ASC`,
-      [photoId]
-    ) as any[];
+    const comments = await Comment.find({ photo: photoId })
+      .populate('user', 'username')
+      .sort({ createdAt: 1 })
+      .lean();
+    
+    // Format comments
+    const formattedComments = comments.map(comment => ({
+      ...comment,
+      username: comment.user.username
+    }));
     
     return NextResponse.json<ApiResponse<any[]>>({
       success: true,
-      data: comments,
+      data: formattedComments,
     });
   } catch (error) {
     console.error('Error fetching comments:', error);

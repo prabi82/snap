@@ -15,10 +15,13 @@ export default function Navbar() {
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
     
+    console.log('Navbar checking auth:', { hasToken: !!token, hasUser: !!user });
+    
     if (token && user) {
       setIsLoggedIn(true);
       try {
         const userData = JSON.parse(user);
+        console.log('User data loaded:', { username: userData.username });
         setUsername(userData.username);
       } catch (e) {
         console.error('Error parsing user data:', e);

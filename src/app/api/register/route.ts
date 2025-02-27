@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
-import bcrypt from 'bcryptjs';
+import { connectMongoose } from '@/lib/mongodb';
+import User from '@/models/User';
 import { ApiResponse } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
+    // Connect to MongoDB
+    await connectMongoose();
+    
     const body = await request.json();
     const { username, email, password } = body;
 
@@ -16,38 +19,32 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if email already exists
-    const existingUsers = await query(
-      'SELECT * FROM users WHERE email = ? OR username = ?',
-      [email, username]
-    );
+    // Check if email or username already exists
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }]
+    });
 
-    if (Array.isArray(existingUsers) && existingUsers.length > 0) {
+    if (existingUser) {
       return NextResponse.json<ApiResponse<null>>({
         success: false,
         error: 'Email or username already exists',
       }, { status: 409 });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // Create new user (password will be hashed by pre-save hook)
+    const newUser = await User.create({
+      username,
+      email,
+      password
+    });
 
-    // Insert new user
-    const result = await query(
-      'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-      [username, email, hashedPassword]
-    );
-
-    // Get the inserted user (without password)
-    const newUser = await query(
-      'SELECT id, username, email, created_at, updated_at FROM users WHERE id = ?',
-      [(result as any).insertId]
-    ) as any[];
+    // Remove password from the response
+    const userObject = newUser.toObject();
+    delete userObject.password;
 
     return NextResponse.json<ApiResponse<{ user: any }>>({
       success: true,
-      data: { user: newUser[0] },
+      data: { user: userObject },
     }, { status: 201 });
   } catch (error) {
     console.error('Registration error:', error);
