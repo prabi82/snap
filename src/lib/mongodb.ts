@@ -6,8 +6,8 @@ import { ensureModelsAreRegistered } from './models-registry';
 
 dotenv.config();
 
-// MongoDB connection URI
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://username:password@cluster.mongodb.net/snap?retryWrites=true&w=majority';
+// MongoDB connection URI - add fallback for easier debugging
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://snap:C4U2QqNfr8OLzNjt@snap.qw1lv.mongodb.net/?retryWrites=true&w=majority&appName=snap';
 const DB_NAME = process.env.MONGODB_DB_NAME || 'snap';
 
 // Determine if we're in a build/SSG context
@@ -29,10 +29,12 @@ async function connectToDatabase(): Promise<{ client: MongoClient, db: Db }> {
   }
 
   if (!MONGODB_URI) {
-    throw new Error('Please define the MONGODB_URI environment variable');
+    throw new Error('MONGODB_URI environment variable is not defined');
   }
 
   try {
+    console.log('Connecting to MongoDB with URI starting with:', MONGODB_URI.substring(0, 20) + '...');
+    
     // Connect to MongoDB
     const client = new MongoClient(MONGODB_URI, {
       serverApi: {
@@ -74,15 +76,22 @@ export async function connectMongoose() {
       ensureModelsAreRegistered();
       modelsRegistered = true;
     }
+    console.log('Mongoose already connected, readyState:', mongoose.connection.readyState);
     return; // Already connected
   }
 
   if (!MONGODB_URI) {
-    throw new Error('Please define the MONGODB_URI environment variable');
+    throw new Error('MONGODB_URI environment variable is not defined');
   }
 
   try {
-    await mongoose.connect(MONGODB_URI);
+    console.log('Connecting to MongoDB with Mongoose, URI starts with:', MONGODB_URI.substring(0, 20) + '...');
+    
+    // Add connection options for better reliability
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000, // 5 seconds
+      socketTimeoutMS: 45000, // 45 seconds
+    });
     console.log('Mongoose connection established successfully');
     
     // Ensure all models are properly registered
@@ -90,6 +99,10 @@ export async function connectMongoose() {
     modelsRegistered = true;
   } catch (error) {
     console.error('Mongoose connection error:', error);
+    // Provide more context in the error
+    if (error instanceof Error) {
+      error.message = `MongoDB connection failed: ${error.message}. Please check MONGODB_URI value and network access settings.`;
+    }
     throw error;
   }
 }
