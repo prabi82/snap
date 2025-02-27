@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "start:prod": "NODE_ENV=production node server.js",
+    "start:node16": "NODE_ENV=production node start-with-polyfills.js",
     "lint": "next lint",
     "init-db": "ts-node --project tsconfig.json src/lib/init-db.ts",
     "deploy:prepare": "npm run build && node scripts/prepare-deploy.js"

@@ -10,7 +10,7 @@ const nextConfig = {
     return config;
   },
   // For cPanel deployment
-  output: 'standalone',
+  output: 'export',
 };
 
 module.exports = nextConfig; 

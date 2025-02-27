@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snap Database Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #3B82F6;
+      border-bottom: 2px solid #3B82F6;
+      padding-bottom: 10px;
+    }
+    .box {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      background-color: #d1fae5;
+      border-left: 4px solid #10B981;
+      padding: 10px 15px;
+    }
+    .error {
+      background-color: #fee2e2;
+      border-left: 4px solid #ef4444;
+      padding: 10px 15px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td {
+      border: 1px solid #e5e7eb;
+    }
+    th, td {
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f9fafb;
+    }
+    .warning {
+      background-color: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 10px 15px;
+      margin-bottom: 20px;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+    }
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border-left-color: #3B82F6;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h1>Snap Database Connection Test</h1>
+  
+  <div class="warning">
+    <strong>Security Notice:</strong> This page displays sensitive configuration information.
+    Delete this file from your server after testing.
+  </div>
+  
+  <div id="results">
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Testing database connection...</p>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const resultsDiv = document.getElementById('results');
+      
+      try {
+        // Fetch API route to test database
+        const response = await fetch('/api/db-test');
+        const data = await response.json();
+        
+        // Build HTML response
+        let html = '';
+        
+        // Configuration
+        html += `
+        <div class="box">
+          <h2>Environment Configuration</h2>
+          <table>
+            <tr>
+              <th>Setting</th>
+              <th>Value</th>
+            </tr>
+            <tr>
+              <td>Node.js Version</td>
+              <td>${data.nodeVersion || 'Unknown'}</td>
+            </tr>
+            <tr>
+              <td>Environment</td>
+              <td>${data.environment || 'Not set'}</td>
+            </tr>
+            <tr>
+              <td>Database Host</td>
+              <td>${data.config?.host || 'Not set'}</td>
+            </tr>
+            <tr>
+              <td>Database Name</td>
+              <td>${data.config?.database || 'Not set'}</td>
+            </tr>
+            <tr>
+              <td>Database User</td>
+              <td>${data.config?.user || 'Not set'}</td>
+            </tr>
+            <tr>
+              <td>Database Password</td>
+              <td>${data.config?.password || '<span style="color:red">Not set</span>'}</td>
+            </tr>
+          </table>
+        </div>`;
+        
+        // Test results
+        html += `
+        <div class="box">
+          <h2>Connection Test Results</h2>`;
+          
+        if (data.success) {
+          html += `
+          <div class="success">
+            <strong>✅ Connection successful!</strong>
+            <p>Successfully connected to the MySQL database.</p>
+          </div>`;
+          
+          // Table info
+          if (data.databaseInfo?.tables?.length > 0) {
+            html += `
+            <h3>Database Tables</h3>
+            <table>
+              <tr>
+                <th>Table</th>
+                <th>Status</th>
+                <th>Row Count</th>
+              </tr>`;
+              
+            data.databaseInfo.tables.forEach(table => {
+              html += `
+              <tr>
+                <td>${table.name}</td>
+                <td>${table.exists 
+                  ? '<span style="color:green">Exists</span>' 
+                  : '<span style="color:red">Error</span>'}</td>
+                <td>${table.exists ? table.rowCount : 'Table does not exist or cannot be accessed'}</td>
+              </tr>`;
+            });
+            
+            html += `</table>`;
+          }
+        } else {
+          html += `
+          <div class="error">
+            <strong>❌ Connection failed!</strong>
+            <p>Error: ${data.error || data.message || 'Unknown error'}</p>
+            <p>Common issues:</p>
+            <ul>
+              <li>Check your .env.local file for correct credentials</li>
+              <li>Verify the database user has permission to access the database</li>
+              <li>Ensure the database exists and is properly configured</li>
+              <li>Check if your server's MySQL service is running</li>
+            </ul>
+          </div>`;
+        }
+        
+        html += `
+        </div>
+        
+        <div style="margin-top: 30px; font-size: 0.8rem; color: #6b7280; text-align: center;">
+          <p>Snap Photo Sharing Application - Database Test</p>
+          <p>Generated on ${data.timestamp || new Date().toISOString()}</p>
+        </div>`;
+        
+        resultsDiv.innerHTML = html;
+      } catch (error) {
+        resultsDiv.innerHTML = `
+        <div class="box">
+          <div class="error">
+            <strong>❌ Test failed!</strong>
+            <p>Could not connect to the API route: ${error.message}</p>
+            <p>This could mean:</p>
+            <ul>
+              <li>Your server is not running properly</li>
+              <li>The API route does not exist or is not accessible</li>
+              <li>There's a problem with your Next.js configuration</li>
+            </ul>
+          </div>
+        </div>`;
+      }
+    });
+  </script>
+</body>
+</html> 

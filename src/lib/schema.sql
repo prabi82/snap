@@ -1,8 +1,8 @@
--- Create database if it doesn't exist
-CREATE DATABASE IF NOT EXISTS snap_db;
+-- Database schema for Snap Photo Sharing Application
+-- For deployment on cPanel
 
--- Use the database
-USE snap_db;
+-- Use the pre-created database
+USE onlyoman_snap;
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
