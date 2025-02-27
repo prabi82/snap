@@ -37,8 +37,19 @@ next-env.d.ts
 /deploy
 /scripts
 
-# Include .next for production deployment
-# Commented out to allow .next folder to be committed in production branch
-# /.next/
+# Test files
+/test-db-connection.js
+/db-test.js
+/db-test-alt.js
+/check-db.js
+/check-env.js
+/simple-test-server.js
+/db-test.html
+/db-test.php
+/lightweight-server.js
 
-# Include only necessary files for deployment 
+# Don't ignore important files
+!server.js
+!next.config.js
+!src/
+!public/ 

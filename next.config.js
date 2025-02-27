@@ -9,8 +9,8 @@ const nextConfig = {
     };
     return config;
   },
-  // For cPanel deployment
-  output: 'export',
+  // For Vercel deployment
+  output: 'standalone',
 };
 
 module.exports = nextConfig; 
