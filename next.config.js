@@ -11,12 +11,16 @@ const nextConfig = {
   },
   // For Vercel deployment
   output: 'standalone',
-  // Source directory config - tells Next.js where to find the pages/app directories
-  distDir: '.next',
-  // This is the correct way to specify the source directory
+  // Source directory configuration - fix for "Couldn't find any `pages` or `app` directory"
   experimental: {
     appDir: true,
   },
+  // This is the correct and required setting for projects with src directory
+  distDir: '.next',
+  // Explicitly tell Next.js where your pages/app directories are
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
+  // Set your source directory
+  dir: './src',
 };
 
 module.exports = nextConfig; 

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node make-symlinks.js",
     "build": "next build",
     "start": "next start",
     "start:prod": "NODE_ENV=production node server.js",
