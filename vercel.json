@@ -1,0 +1,10 @@
+{
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "outputDirectory": ".next",
+  "devCommand": "npm run dev",
+  "framework": "nextjs",
+  "buildEnvironment": {
+    "SKIP_DB_CONNECTION": "true"
+  }
+} 
